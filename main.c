@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,13 +21,12 @@ typedef struct {
 typedef struct {
     char nombre[32];
 
-    
     float hist_pm25[DIAS_HIST];
     float hist_no2[DIAS_HIST];
     float hist_so2[DIAS_HIST];
     float hist_co2[DIAS_HIST]; 
 
-  
+    
     float act_pm25;
     float act_no2;
     float act_so2;
@@ -38,10 +36,6 @@ typedef struct {
 } Zona;
 
 
-static void limpiarNuevaLinea(char *s) {
-    size_t n = strlen(s);
-    if (n > 0 && s[n-1] == '\n') s[n-1] = '\0';
-}
 
 static float clampf(float x, float lo, float hi) {
     if (x < lo) return lo;
@@ -52,7 +46,7 @@ static float clampf(float x, float lo, float hi) {
 
 static void push_hist(float hist[DIAS_HIST], float nuevo) {
     for (int i = DIAS_HIST - 1; i > 0; --i) {
-        hist[i] = hist[i-1];
+        hist[i] = hist[i - 1];
     }
     hist[0] = nuevo;
 }
@@ -66,7 +60,7 @@ static float promedio30(const float hist[DIAS_HIST]) {
 
 
 static float ponderado3(const float hist[DIAS_HIST]) {
-    return 0.5f*hist[0] + 0.3f*hist[1] + 0.2f*hist[2];
+    return 0.5f * hist[0] + 0.3f * hist[1] + 0.2f * hist[2];
 }
 
 
@@ -76,12 +70,14 @@ static float ajuste_clima(float base, Clima c) {
     const float kH = 0.05f;
 
     float dT = (c.tempC - 20.0f) / 20.0f;
-    float dV = (c.viento_ms - 2.0f) / 5.0f;
+    float dV = (c.viento_ms - 2.0f) / 5.0f;  
     float dH = (c.humedad_pct - 50.0f) / 50.0f;
 
-    float factor = 1.0f + (kT*dT) - (kV*dV) + (kH*dH);
-    /* Evitar factores extremos */
+    float factor = 1.0f + (kT * dT) - (kV * dV) + (kH * dH);
+
+    
     factor = clampf(factor, 0.70f, 1.50f);
+
     return base * factor;
 }
 
@@ -105,18 +101,21 @@ static int guardarCSV(const char *ruta, Zona zonas[], int nZonas) {
                     zonas[z].hist_co2[d]);
         }
     }
+
     fclose(f);
     return 1;
 }
-
 
 static int cargarCSV(const char *ruta, Zona zonas[], int nZonas) {
     FILE *f = fopen(ruta, "r");
     if (!f) return 0;
 
     char linea[256];
-    /* Saltar cabecera */
-    if (!fgets(linea, sizeof(linea), f)) { fclose(f); return 0; }
+   
+    if (!fgets(linea, sizeof(linea), f)) {
+        fclose(f);
+        return 0;
+    }
 
     while (fgets(linea, sizeof(linea), f)) {
         char nombre[64];
@@ -132,9 +131,9 @@ static int cargarCSV(const char *ruta, Zona zonas[], int nZonas) {
             if (strcmp(nombre, zonas[z].nombre) == 0) {
                 if (dia >= 0 && dia < DIAS_HIST) {
                     zonas[z].hist_pm25[dia] = pm25;
-                    zonas[z].hist_no2[dia] = no2;
-                    zonas[z].hist_so2[dia] = so2;
-                    zonas[z].hist_co2[dia] = co2;
+                    zonas[z].hist_no2[dia]  = no2;
+                    zonas[z].hist_so2[dia]  = so2;
+                    zonas[z].hist_co2[dia]  = co2;
                 }
                 break;
             }
@@ -147,30 +146,29 @@ static int cargarCSV(const char *ruta, Zona zonas[], int nZonas) {
 
 
 static void imprimirRecomendaciones(int alertaPM25, int alertaNO2, int alertaSO2, int alertaCO2) {
-   
     if (!alertaPM25 && !alertaNO2 && !alertaSO2 && !alertaCO2) {
         printf("  - Mantener medidas preventivas: transporte público, verificación vehicular y monitoreo continuo.\n");
         return;
     }
 
-    printf("  - Activar campaña informativa a la ciudadanía (grupos vulnerables: niños, adultos mayores, asmáticos).\n");
-    printf("  - Reforzar transporte público / teletrabajo parcial en horas pico si es viable.\n");
+    printf("  - Activar campaña informativa (prioridad: población vulnerable: niños, adultos mayores, asmáticos).\n");
+    printf("  - Reforzar transporte público / teletrabajo parcial en horas pico (si es viable).\n");
 
     if (alertaPM25) {
-        printf("  - Reducir fuentes de material particulado: control de polvo en vías/obras, limitar quemas, barrido húmedo.\n");
+        printf("  - Reducir material particulado: control de polvo en vías/obras, limitar quemas, barrido húmedo.\n");
         printf("  - Recomendar suspensión o reprogramación de actividad física intensa al aire libre.\n");
     }
     if (alertaNO2) {
-        printf("  - Medidas de reducción de tráfico: restricción temporal, rutas alternas, control de emisiones.\n");
+        printf("  - Reducir emisiones vehiculares: restricción temporal, rutas alternas, control de fuentes móviles.\n");
     }
     if (alertaSO2) {
-        printf("  - Supervisar/regular emisiones industriales; considerar reducción temporal de operación en fuentes puntuales.\n");
+        printf("  - Supervisar emisiones industriales; considerar reducción temporal de operación en fuentes puntuales.\n");
     }
     if (alertaCO2) {
-        printf("  - (CO2) Mejorar ventilación y gestión de espacios cerrados si aplica; verificar fuentes de combustión.\n");
+        printf("  - (CO2) Verificar fuentes de combustión / ventilación (referencia operativa, configurable).\n");
     }
 
-    printf("  - Monitoreo reforzado y reevaluación cada 6-12 horas.\n");
+    printf("  - Reevaluación recomendada cada 6-12 horas.\n");
 }
 
 
@@ -181,14 +179,14 @@ static void initZonas(Zona zonas[], int *nZonas, float *limCO2) {
     const char *nombres[MAX_ZONAS] = {"Centro", "Norte", "Sur", "Industrial", "Residencial"};
     for (int z = 0; z < *nZonas; ++z) {
         strncpy(zonas[z].nombre, nombres[z], sizeof(zonas[z].nombre));
-        zonas[z].nombre[sizeof(zonas[z].nombre)-1] = '\0';
+        zonas[z].nombre[sizeof(zonas[z].nombre) - 1] = '\0';
 
-       
+        /* Inicializar históricos con valores razonables (ejemplo) */
         for (int d = 0; d < DIAS_HIST; ++d) {
-            zonas[z].hist_pm25[d] = 10.0f + (float)(z);  
+            zonas[z].hist_pm25[d] = 10.0f + (float)(z);
             zonas[z].hist_no2[d]  = 15.0f + (float)(z);
             zonas[z].hist_so2[d]  = 20.0f + (float)(z);
-            zonas[z].hist_co2[d]  = 800.0f + 10.0f*(float)(z);
+            zonas[z].hist_co2[d]  = 800.0f + 10.0f * (float)(z);
         }
 
         zonas[z].act_pm25 = zonas[z].hist_pm25[0];
@@ -223,7 +221,7 @@ static void ingresarLecturas(Zona *pz) {
     printf("  Viento (m/s):    "); scanf("%f", &pz->clima.viento_ms);
     printf("  Humedad (%%):     "); scanf("%f", &pz->clima.humedad_pct);
 
-   
+    /* Guardar la lectura actual como "día 0" en históricos (simulación de actualización diaria) */
     push_hist(pz->hist_pm25, pz->act_pm25);
     push_hist(pz->hist_no2,  pz->act_no2);
     push_hist(pz->hist_so2,  pz->act_so2);
@@ -249,7 +247,7 @@ static void imprimirPromedios(Zona zonas[], int nZonas) {
 }
 
 static void predecirYAlertar(Zona zonas[], int nZonas, float limCO2) {
-    printf("\nPREDICCION 24H + ALERTAS (basado en ponderado 3 dias + ajuste clima):\n");
+    printf("\nPREDICCION 24H + ALERTAS (ponderado 3 dias + ajuste clima):\n");
 
     for (int z = 0; z < nZonas; ++z) {
         Zona *pz = &zonas[z];
@@ -284,7 +282,7 @@ static int exportarReporte(const char *ruta, Zona zonas[], int nZonas, float lim
     FILE *f = fopen(ruta, "w");
     if (!f) return 0;
 
-    fprintf(f, "REPORTE SIGPCA-ZU\n");
+    fprintf(f, "REPORTE - Sistema de Monitoreo de Contaminacion del Aire\n");
     fprintf(f, "Umbrales 24h: PM2.5=%.2f ug/m3, NO2=%.2f ug/m3, SO2=%.2f ug/m3, CO2=%.2f ppm\n\n",
             LIM_PM25_24H, LIM_NO2_24H, LIM_SO2_24H, limCO2);
 
@@ -326,12 +324,12 @@ int main(void) {
 
     initZonas(zonas, &nZonas, &limCO2);
 
-
+   
     cargarCSV("historial.csv", zonas, nZonas);
 
     int op = 0;
     while (1) {
-        printf("\n=== SIGPCA-ZU ===\n");
+        printf("\n=== Sistema de Monitoreo de Contaminacion del Aire ===\n");
         printf("1) Ingresar/Actualizar lecturas actuales + clima (por zona)\n");
         printf("2) Calcular y mostrar promedios historicos (30 dias)\n");
         printf("3) Predecir 24h y mostrar alertas + recomendaciones\n");
@@ -339,22 +337,23 @@ int main(void) {
         printf("5) Exportar reporte a archivo (reporte.txt)\n");
         printf("6) Guardar y salir\n");
         printf("Opcion: ");
+
         if (scanf("%d", &op) != 1) {
             printf("Entrada invalida.\n");
-            
-            int c; while ((c = getchar()) != '\n' && c != EOF) {}
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF) {}
             continue;
         }
 
         if (op == 1) {
             mostrarZonas(zonas, nZonas);
             int z;
-            printf("Seleccione zona (0-%d): ", nZonas-1);
+            printf("Seleccione zona (0-%d): ", nZonas - 1);
             scanf("%d", &z);
             if (z < 0 || z >= nZonas) {
                 printf("Zona invalida.\n");
             } else {
-                ingresarLecturas(&zonas[z]);
+                ingresarLecturas(&zonas[z]); 
             }
         } else if (op == 2) {
             imprimirPromedios(zonas, nZonas);
